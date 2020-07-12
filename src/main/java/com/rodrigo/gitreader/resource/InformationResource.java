@@ -1,11 +1,13 @@
 package com.rodrigo.gitreader.resource;
 
-import com.rodrigo.gitreader.dto.InformationDTO;
-import com.rodrigo.gitreader.model.Information;
+import com.rodrigo.gitreader.dto.RepoInfoDTO;
+import com.rodrigo.gitreader.model.RepoInfo;
 import com.rodrigo.gitreader.service.InformationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/information")
 public class InformationResource {
@@ -18,14 +20,15 @@ public class InformationResource {
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{repoAuthor}/{repoName}")
-    public InformationDTO getRepositoryInformation(@PathVariable("repoAuthor") String repoAuthor,
-                                                   @PathVariable("repoName") String repoName) {
-        Information information = readerService.getRepositoryInformation(repoAuthor + "/" + repoName);
-        return new InformationDTO(information);
+    public RepoInfoDTO getRepositoryInformation(@PathVariable("repoAuthor") String repoAuthor,
+                                                @PathVariable("repoName") String repoName) {
+        RepoInfo information = readerService.getRepositoryInformation(repoAuthor + "/" + repoName);
+        return new RepoInfoDTO(information);
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public void handle() {
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR, reason = "Error processing repository information")
+    public void handle(Exception e) {
+        //return a generic message not exposing internal state
     }
 }

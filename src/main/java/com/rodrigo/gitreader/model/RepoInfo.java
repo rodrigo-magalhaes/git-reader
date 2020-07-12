@@ -5,7 +5,8 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class Information {
+public class RepoInfo {
+    private String repoName;
     private Long lines;
     private Long bytes;
 }

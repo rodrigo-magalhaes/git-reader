@@ -1,15 +1,14 @@
 package com.rodrigo.gitreader.dto;
 
-import com.rodrigo.gitreader.model.Information;
-import lombok.AllArgsConstructor;
+import com.rodrigo.gitreader.model.RepoInfo;
 import lombok.Data;
 
 @Data
-public class InformationDTO {
+public class RepoInfoDTO {
     private Long lines;
     private Long bytes;
 
-    public InformationDTO(Information information) {
+    public RepoInfoDTO(RepoInfo information) {
         this.lines = information.getLines();
         this.bytes = information.getBytes();
     }

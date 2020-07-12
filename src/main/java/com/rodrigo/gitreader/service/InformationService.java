@@ -1,112 +1,81 @@
 package com.rodrigo.gitreader.service;
 
-import com.rodrigo.gitreader.model.Information;
+import com.rodrigo.gitreader.model.HtmlInfo;
+import com.rodrigo.gitreader.model.RepoInfo;
 import com.rodrigo.gitreader.util.DataBase;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
+import com.rodrigo.gitreader.util.HtmlReader;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.rodrigo.gitreader.util.Constants.GIT_URL;
+
+@Slf4j
 @Service
 public class InformationService {
 
-    private Set<String> knownLinks = new HashSet<>();
+    private HtmlReader htmlReader;
     private AtomicLong lines = new AtomicLong(0);
     private AtomicLong size = new AtomicLong(0);
 
-    public Information getRepositoryInformation(String repoName) {
-        Information information = DataBase.get(repoName);
-        if(information != null) {
+    public InformationService(HtmlReader htmlReader) {
+        this.htmlReader = htmlReader;
+    }
+
+    public RepoInfo getRepositoryInformation(String repoName) {
+        RepoInfo information = DataBase.get(repoName);
+        if (information != null) {
             return information;
         }
-        getInformation("https://github.com/"+repoName);
-        information = new Information(lines.get(), size.get());
-        DataBase.put(repoName, information);
-        return information;
+        getInformation(GIT_URL + repoName);
+        return saveRepoInfo(repoName);
     }
 
-    private void getInformation(String URL) {
-        if (!knownLinks.contains(URL)) {
-            try {
-                knownLinks.add(URL);
+    private RepoInfo saveRepoInfo(String repoName) {
+        RepoInfo repoInfo = new RepoInfo(repoName, lines.get(), size.get());
+        DataBase.put(repoInfo.getRepoName(), repoInfo);
+        return repoInfo;
+    }
 
-                Document document = Jsoup.connect(URL).get();
-                Elements links = document.select(".js-details-container.Details")
-                        .select("div.js-navigation-item")
-                        .select("a:not([rel])")
-                        .select("a.js-navigation-open");
-
-                if (links.isEmpty()) {
-                    gatherFileInformation(document.select("div.text-mono").text());
-                }
-
-                links.parallelStream().forEach(page -> getInformation(page.attr("abs:href")));
-
-            } catch (IOException e) {
-                System.err.println("For '" + URL + "': " + e.getMessage());
+    private void getInformation(String pageUrl) {
+        try {
+            HtmlInfo htmlInfo = htmlReader.getInformation(pageUrl);
+            if (htmlInfo.getLinks().isEmpty()) {
+                gatherFileInformation(htmlInfo);
             }
+            htmlInfo.getLinks().parallelStream().forEach(this::getInformation);
+        } catch (IOException e) {
+            log.error("Error when processing " + pageUrl + ": " + e.getMessage());
         }
     }
 
-    private void gatherFileInformation(String information) {
-        lines.addAndGet(getLines(information));
-        size.addAndGet(getBytes(information).longValue());
+    private void gatherFileInformation(HtmlInfo details) {
+        lines.addAndGet(getLines(details.getLines()));
+        size.addAndGet(getBytes(details.getBytes()).longValue());
     }
 
     private long getLines(String text) {
-        if (!text.contains("line"))
+        if (text == null)
             return 0L;
-        String substring = text.substring(0, text.indexOf(" "));
+        String substring = text.substring(0, text.indexOf(' '));
         return Long.parseLong(substring);
     }
 
     private Float getBytes(String text) {
-        int initialIndexOfSize = text.indexOf(")") + 1;
-        Float size = Optional.ofNullable(text)
-                .map(text2 -> Float.valueOf(text2.substring(initialIndexOfSize, text2.lastIndexOf(" "))))
+        if (text == null)
+            return (float) 0;
+        Float fileSize = Optional.ofNullable(text)
+                .map(text2 -> Float.valueOf(text.substring(0, text.indexOf(' '))))
                 .orElse((float) 0);
         if (text.contains("KB"))
-            return size * 1024;
+            return fileSize * 1024;
         if (text.contains("MB"))
-            return size * (1024 * 1024);
+            return fileSize * (1024 * 1024);
         if (text.contains("GB"))
-            return size * (1024 * 1024 * 1024);
-        return size;
+            return fileSize * (1024 * 1024 * 1024);
+        return fileSize;
     }
-
-//    public String gatherFileInformation(String repositoryInformation) throws IOException {
-//
-//        String link = String.format("https://github.com/%s/archive/master.zip", repositoryInformation);
-//        URL url  = new URL( link );
-//        HttpURLConnection http = (HttpURLConnection)url.openConnection();
-//        Map< String, List< String >> header = http.getHeaderFields();
-//        while( isRedirected( header )) {
-//            link = header.get( "Location" ).get( 0 );
-//            url    = new URL( link );
-//            http   = (HttpURLConnection)url.openConnection();
-//            header = http.getHeaderFields();
-//        }
-//        InputStream input  = http.getInputStream();
-//        byte[]       buffer = new byte[4096];
-//        int          n      = -1;
-//        OutputStream output = new FileOutputStream( new File( fileName ));
-//        while ((n = input.read(buffer)) != -1) {
-//            output.write( buffer, 0, n );
-//        }
-//        output.close();
-//        return "";
-//    }
-
-//    private boolean isRedirected( Map<String, List<String>> header ) {
-//        for( String hv : header.get( null )) {
-//            if(   hv.contains( " 301 " )
-//                    || hv.contains( " 302 " )) return true;
-//        }
-//        return false;
-//    }
-
 }
