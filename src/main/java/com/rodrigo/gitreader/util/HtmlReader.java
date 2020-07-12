@@ -37,6 +37,7 @@ public class HtmlReader {
         Optional.of(line)
                 .filter(ln -> !ln.isEmpty())
                 .filter(ln -> ln.contains(" lines") && ln.contains("("))
+                .filter(ln -> !ln.contains("class=\"pl-k"))
                 .ifPresent(ln -> htmlInfo.setLines(ln.trim()));
     }
 
@@ -44,6 +45,7 @@ public class HtmlReader {
         Optional.of(line)
                 .filter(ln -> !ln.isEmpty())
                 .filter(ln -> ln.contains(" Bytes") || ln.contains(" KB") || ln.contains(" MB") || ln.contains(" GB"))
+                .filter(ln -> !ln.contains("class=\"pl-k"))
                 .ifPresent(ln -> htmlInfo.setBytes(ln.trim()));
     }
 }
