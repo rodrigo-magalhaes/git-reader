@@ -14,4 +14,13 @@ public class HtmlInfo {
     public HtmlInfo() {
         links = new HashSet<>();
     }
+
+    @Override
+    public String toString() {
+        return "HtmlInfo{" +
+                "links=" + links +
+                ", lines='" + lines + '\'' +
+                ", bytes='" + bytes + '\'' +
+                '}';
+    }
 }
